@@ -163,21 +163,33 @@ public class TCPServer {
                         System.out.println("Converted ResponseModel: " + responseModel.getUserUuid() + ", " + responseModel.getContentType() + ", " + responseModel.getContent());
 
 
-                        if(responseModel.getContentType().equals("joinRoom")){
-                            server.joinRoom(responseModel.getRoomNumber(), this);
-                        }else if (responseModel.getContentType().equals("leaveRoom")){
-                            server.leaveRoom(responseModel.getRoomNumber(), this);
-                        }else if(responseModel.getContentType().equals("chat")){
-
-                        }else if(responseModel.getContentType().equals("draw")){
-
-                        }else if(responseModel.getContentType().equals("firstConnect")){
-
-                        }else if(responseModel.getContentType().equals("getAllRooms")){
-
-                        }else if(responseModel.getContentType().equals("createRoom")){
-                            
+                        switch (responseModel.getContentType()) {
+                            case "joinRoom":
+                                server.joinRoom(responseModel.getRoomNumber(), this);
+                                break;
+                            case "leaveRoom":
+                                server.leaveRoom(responseModel.getRoomNumber(), this);
+                                break;
+                            case "chat":
+                                // chat ile ilgili işlemler
+                                break;
+                            case "draw":
+                                // draw ile ilgili işlemler
+                                break;
+                            case "firstConnect":
+                                // firstConnect ile ilgili işlemler
+                                break;
+                            case "getAllRooms":
+                                // getAllRooms ile ilgili işlemler
+                                break;
+                            case "createRoom":
+                                // createRoom ile ilgili işlemler
+                                break;
+                            default:
+                                throw new IllegalArgumentException("Unknown content type: " + responseModel.getContentType());
                         }
+                        
+                        
                         
                     } catch (Exception e) {
                         e.printStackTrace();
