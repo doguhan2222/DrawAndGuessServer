@@ -9,6 +9,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.net.ssl.SSLContext;
@@ -16,7 +17,10 @@ import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 
+import com.google.gson.Gson;
+
 import DatabaseHelper.DatabaseHelper;
+import Model.ResponseModel;
 
 public class TCPServer {
     private ServerSocket serverSocket;
@@ -97,11 +101,40 @@ public class TCPServer {
         }
     }
 
+    public static String generateUUID() {
+        UUID uuid = UUID.randomUUID();
+        return uuid.toString();
+    }
+
+    private static void saveToDatabase(String data) {
+        String query = "INSERT INTO testTable (veri) VALUES (?)";// ilkDeger deneme  tablodeneme1
+        try (Connection connection = DatabaseHelper.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            System.out.println("Database connection established");
+            preparedStatement.setString(1, data);
+            int rowsAffected = preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    public synchronized void removeFromRooms(ClientHandler client) {
+        for (Set<ClientHandler> room : gameRooms.values()) {
+            room.remove(client);
+        }
+        clientThread.interrupt();
+    }
+   
+
+    public synchronized void removeClient(ClientHandler client) {
+        clients.remove(client.clientSocket);
+    }
+
     private  class ClientHandler implements Runnable {
         private Socket clientSocket;
         private boolean running;
         private TCPServer server;
         private DataOutputStream dataout;
+        
 
         public ClientHandler(Socket socket, TCPServer server) {
             this.clientSocket = socket;
@@ -122,17 +155,46 @@ public class TCPServer {
                 String message;
 
                 while (running && (message = reader.readLine()) != null) {
-                    System.out.println("Client'dan gelen veri : " + clientSocket.getInetAddress().getHostAddress() + " "
-                            + message);
+                    System.out.println("Client'dan gelen veri : " + clientSocket.getInetAddress().getHostAddress() + " "+ message);
+                    ResponseModel responseModel ;
+                    Gson gson = new Gson();
+                    try {
+                        responseModel = gson.fromJson(message, ResponseModel.class);
+                        System.out.println("Converted ResponseModel: " + responseModel.getUserUuid() + ", " + responseModel.getContentType() + ", " + responseModel.getContent());
+
+
+                        if(responseModel.getContentType().equals("joinRoom")){
+                            server.joinRoom(responseModel.getRoomNumber(), this);
+                        }else if (responseModel.getContentType().equals("leaveRoom")){
+                            server.leaveRoom(responseModel.getRoomNumber(), this);
+                        }else if(responseModel.getContentType().equals("chat")){
+
+                        }else if(responseModel.getContentType().equals("draw")){
+
+                        }else if(responseModel.getContentType().equals("firstConnect")){
+
+                        }else if(responseModel.getContentType().equals("getAllRooms")){
+
+                        }else if(responseModel.getContentType().equals("createRoom")){
+                            
+                        }
+                        
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                   
+
+
 
                     String[] parts = message.split(":", 2);
                     if (parts.length == 2) {
                         String command = parts[0];
                         String content = parts[1];
-
                         if (command.startsWith("/join")) {
                             server.joinRoom(content, this);
-                        } else if (command.startsWith("/leave")) {
+                        }
+                         else if (command.startsWith("/leave")) {
                             server.leaveRoom(content, this);
                         } else if (command.startsWith("/draw")) {
                             String[] drawParts = content.split(":", 2);
@@ -193,27 +255,6 @@ public class TCPServer {
 
         
     }
-    private static void saveToDatabase(String data) {
-        String query = "INSERT INTO testTable (veri) VALUES (?)";// ilkDeger deneme  tablodeneme1
-        try (Connection connection = DatabaseHelper.getConnection();
-                PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            System.out.println("Database connection established");
-            preparedStatement.setString(1, data);
-            int rowsAffected = preparedStatement.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-    public synchronized void removeFromRooms(ClientHandler client) {
-        for (Set<ClientHandler> room : gameRooms.values()) {
-            room.remove(client);
-        }
-        clientThread.interrupt();
-    }
-   
-
-    public synchronized void removeClient(ClientHandler client) {
-        clients.remove(client.clientSocket);
-    }
+    
 
 }
